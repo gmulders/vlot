@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
-    kotlin("plugin.serialization") version "1.5.31"
+    kotlin("plugin.serialization") version "1.6.21"
 }
 
 group = "org.gertje.pc"
@@ -12,7 +12,7 @@ repositories {
     mavenCentral()
 }
 
-val grpcVersion = "1.43.2"
+val grpcVersion = "1.45.1"
 val grpcKotlinVersion = "1.2.1"
 
 dependencies {
@@ -20,8 +20,8 @@ dependencies {
     implementation("io.grpc:grpc-kotlin-stub:$grpcKotlinVersion")
     implementation("io.grpc:grpc-netty-shaded:$grpcVersion")
     implementation("io.grpc:grpc-stub:$grpcVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.0")
-    implementation("com.ensarsarajcic.kotlinx:serialization-msgpack:0.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.1")
+    implementation("com.ensarsarajcic.kotlinx:serialization-msgpack:0.5.1")
     implementation(project(":vlot-core"))
 }
 
