@@ -23,7 +23,6 @@ class State<T>(val clusterSize: Int, val log: Log<T>) {
     val nextIndex: LongArray = longArrayOf(0, 0, 0)
     val matchIndex: LongArray = longArrayOf(0, 0, 0)
     var leaderId: PeerId = -1
-        private set
 
     fun changeToFollower(term: Term) {
         currentTerm = term

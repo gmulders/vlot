@@ -36,8 +36,6 @@ class ConsensusModule<T>(
     private val stateMachine: StateMachine<T>,
 ): Closeable {
 
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
-
     init {
         electionTicker.start()
     }
@@ -46,7 +44,7 @@ class ConsensusModule<T>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_LATEST,
     )
-    private val job = coroutineScope.launch {
+    private val job = CoroutineScope(Dispatchers.Default).launch {
         someFlow.collect {
             updateFollowers()
         }
@@ -94,10 +92,10 @@ class ConsensusModule<T>(
                 }
                 logIndex++
             }
-
             if (request.leaderCommit > commitIndex) {
                 commitIndex = min(request.leaderCommit, log.lastLogIndex)
             }
+            leaderId = request.leaderId
             return@changeState AppendEntriesResponse(currentTerm, true)
         }
 
@@ -110,21 +108,22 @@ class ConsensusModule<T>(
             }
 
             if (request.term < currentTerm) {
-                // No need to write state here, because we did not yet update any
                 return@changeState RequestVoteResponse(currentTerm, false)
             }
 
-            var voteGranted = false
-            if (
-                (votedFor == -1 || votedFor == request.candidateId)
-                    && isLogUpToDate(request.lastLogIndex, request.lastLogTerm)
-            ) {
-                voteGranted = true
+            val voteGranted = if (shouldCastVote(request)) {
                 castVote(request.candidateId)
                 electionTicker.reset()
+                true
+            } else {
+                false
             }
             return@changeState RequestVoteResponse(currentTerm, voteGranted)
         }
+
+    private suspend fun StateReader<T>.shouldCastVote(request: RequestVoteRequest): Boolean =
+        (votedFor == -1 || votedFor == request.candidateId)
+                && isLogUpToDate(request.lastLogIndex, request.lastLogTerm)
 
     suspend fun onHeartbeatTimeout() {
         logger.info { "$id: \uD83D\uDC93 onHeartbeatTimeout" }
@@ -154,10 +153,10 @@ class ConsensusModule<T>(
         }
     }
 
-    suspend fun addMessage(message: T): Boolean {
+    suspend fun addMessage(message: T): AddMessageResponse {
         val (index, term) = changeState("addMessage") {
             if (role != Leader) {
-                return false
+                return WrongLeader(leaderId)
             }
             // Append the message to the log.
             val newIndex = log.append(message, currentTerm)
@@ -166,17 +165,17 @@ class ConsensusModule<T>(
 
         someFlow.emit(Unit)
 
-        return withTimeoutOrNull(20000) {
+        return withTimeoutOrNull(20_000) {
             appliedSharedFlow
                 .takeWhile { (appliedIndex, appliedTerm) ->
                     appliedIndex < index || appliedTerm < term
                 }
                 .lastOrNull()
-            true
-        } ?: false
+            Success
+        } ?: TimeOut
     }
 
-    private suspend fun updateFollowers(/*newIndex: Long*/) {
+    private suspend fun updateFollowers() {
         val requests = readState {
             otherPeerIds.map { peerId ->
                 val nextIndex = nextIndex[peerId]

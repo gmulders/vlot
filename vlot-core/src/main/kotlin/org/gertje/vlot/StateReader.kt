@@ -21,7 +21,7 @@ open class StateReader<T>(private val delegate: State<T>) {
         get() = delegate.nextIndex
     val matchIndex: LongArray
         get() = delegate.matchIndex
-    val leaderId: PeerId
+    open val leaderId: PeerId
         get() = delegate.leaderId
     open val log: LogReader<T>
         get() = LogReader(delegate.log)

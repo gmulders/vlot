@@ -42,3 +42,10 @@ data class RequestVoteResponse(
     val term: Long,
     val voteGranted: Boolean,
 )
+
+sealed interface AddMessageResponse
+object Success : AddMessageResponse
+object TimeOut : AddMessageResponse
+data class WrongLeader(
+    val leaderId: PeerId,
+) : AddMessageResponse

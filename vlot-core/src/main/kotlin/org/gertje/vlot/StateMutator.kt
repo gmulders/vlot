@@ -23,6 +23,13 @@ class StateMutator<T>(private val delegate: State<T>): StateReader<T>(delegate) 
             delegate.lastApplied = value
         }
 
+    override var leaderId: PeerId
+        get() = delegate.leaderId
+        set(value) {
+            isMutated = true
+            delegate.leaderId = value
+        }
+
     override val log = LogMutator(delegate.log)
 
     fun changeToFollower(term: Term) {
